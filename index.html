@@ -48,8 +48,8 @@ var LOGO='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHcAAAB4CAYAAADIb21fAABD
 var S=null,view='hole',ask=null;
 function blank(){var s=[];for(var i=0;i<4;i++){s.push(new Array(18).fill(null));}
 var par=VGC_PAR.slice(),si=VGC_SI.slice();
-return{names:['Jack','Larry','Earl','Lorry'],hcp:[0,0,0,0],par:par,si:si,scores:s,hole:0,setup:true,types:[null,null,null],cardV:1};}
-function load(){try{var j=localStorage.getItem('sixes2');if(j)S=JSON.parse(j);}catch(e){}if(!S)S=blank();if(!S.types)S.types=[null,null,null];var DN=['Jack','Larry','Earl','Lorry'];S.names=S.names.map(function(n,i){return n==='Player '+(i+1)?DN[i]:n;});if(S.cardV!==1){S.par=VGC_PAR.slice();S.si=VGC_SI.slice();S.cardV=1;}}
+return{names:['Jack','Larry','Earl','Lorry'],hcp:[0,0,0,0],par:par,si:si,scores:s,hole:0,setup:true,types:[null,null,null],cardV:1,stake:2};}
+function load(){try{var j=localStorage.getItem('sixes2');if(j)S=JSON.parse(j);}catch(e){}if(!S)S=blank();if(!S.types)S.types=[null,null,null];if(S.stake==null)S.stake=2;var DN=['Jack','Larry','Earl','Lorry'];S.names=S.names.map(function(n,i){return n==='Player '+(i+1)?DN[i]:n;});if(S.cardV!==1){S.par=VGC_PAR.slice();S.si=VGC_SI.slice();S.cardV=1;}}
 function save(){try{localStorage.setItem('sixes2',JSON.stringify(S));}catch(e){}}
 function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function str(p,h){var H=Math.max(0,S.hcp[p]|0);return Math.floor(H/18)+(S.si[h]<=H%18?1:0);}
@@ -78,18 +78,19 @@ function segFor(L,h){for(var k=0;k<L.segs.length;k++){var g=L.segs[k],last=g.end
 function nm(p){return esc(S.names[p]);}
 function tn(g,i){return nm(g.teams[i][0])+' &amp; '+nm(g.teams[i][1]);}
 function fmt(n){return n>0?'+'+n:n<0?'−'+Math.abs(n):'0';}
-function money(n){return n>0?'+$'+n:n<0?'−$'+Math.abs(n):'$0';}
+function amt(n){n=Math.abs(Math.round(n*100)/100);return n%1?n.toFixed(2):String(n);}
+function money(n){n=Math.round(n*100)/100;return n>0?'+$'+amt(n):n<0?'−$'+amt(n):'$0';}
 function cls(n){return n>0?'pos':n<0?'neg':'';}
 function status(g){return g.total===0?'All square':tn(g,g.total>0?0:1)+' '+Math.abs(g.total)+' up';}
-function payout(g){if(g.total===0)return 'Round halved, no money changes hands.';return tn(g,g.total>0?0:1)+' win the round ($2 each).';}
-function cash(L){var m=[0,0,0,0];L.segs.forEach(function(g){if(g.end==null||g.total===0)return;var w=g.total>0?0:1;g.teams[w].forEach(function(p){m[p]+=2;});g.teams[1-w].forEach(function(p){m[p]-=2;});});return m;}
+function payout(g){if(g.total===0)return 'Round halved, no money changes hands.';return tn(g,g.total>0?0:1)+' win the round ($'+amt(S.stake)+' each).';}
+function cash(L){var m=[0,0,0,0];L.segs.forEach(function(g){if(g.end==null||g.total===0)return;var w=g.total>0?0:1;g.teams[w].forEach(function(p){m[p]+=S.stake;});g.teams[1-w].forEach(function(p){m[p]-=S.stake;});});return m;}
 function typeOf(a,b){for(var t=0;t<3;t++)for(var k=0;k<2;k++){var q=TYPES[t][k];if(q.indexOf(a)>-1&&q.indexOf(b)>-1)return t;}return 0;}
 function bump(p,d){var h=S.hole,g=S.scores[p][h];if(g==null)g=S.par[h];else g=Math.max(1,g+d);S.scores[p][h]=g;save();render();}
 function clr(p){S.scores[p][S.hole]=null;save();render();}
 function go(d){S.hole=Math.max(0,Math.min(17,S.hole+d));save();render();}
 function setView(v){view=v;render();}
 function askC(k){ask=k;render();window.scrollTo(0,0);}
-function doNew(){var n=blank();n.names=S.names;n.hcp=S.hcp;n.par=S.par;n.si=S.si;ask=null;S=n;view='hole';save();render();window.scrollTo(0,0);}
+function doNew(){var n=blank();n.names=S.names;n.hcp=S.hcp;n.par=S.par;n.si=S.si;n.stake=S.stake;ask=null;S=n;view='hole';save();render();window.scrollTo(0,0);}
 function doRedo(){S.types=[null,null,null];S.setup=false;ask=null;view='hole';save();render();window.scrollTo(0,0);}
 function confirmCard(){if(!ask)return '';return '<div class="card"><b>'+(ask==='new'?'Clear all scores and start a new game?':'Clear the team picks? Scores are kept.')+'</b><div class="row" style="margin-top:8px"><button class="pri sp" onclick="'+(ask==='new'?'doNew()':'doRedo()')+'">Yes, do it</button><button class="sp" onclick="askC(null)">Cancel</button></div></div>';}
 function setDrive(){var l=+document.getElementById('dl').value,s=+document.getElementById('ds').value;
@@ -152,10 +153,10 @@ o+='</div>';});
 var m=cash(L),ps=[0,1,2,3].sort(function(a,b){return m[b]-m[a];});
 o+='<div class="card"><h2>Money, finished rounds</h2>';
 ps.forEach(function(p){o+='<div class="row" style="padding:4px 0"><div class="sp">'+nm(p)+'<div class="mu">'+grossLine(p)+'</div></div><div class="big '+cls(m[p])+'">'+money(m[p])+'</div></div>';});
-return o+'<div class="mu">$2 per player per round. Rounds still in play aren’t counted. In the gross line, * means holes still to score.</div></div>';}
+return o+'<div class="mu">$'+amt(S.stake)+' per player per round. Rounds still in play aren’t counted. In the gross line, * means holes still to score.</div></div>';}
 function setupHTML(){var o='<div class="row" style="margin:6px 0"><img class="logo" src="'+LOGO+'" alt="VGC logo"><div><h1 style="margin:0">VGC Codgers Sixes</h1><div class="mu">Setup</div></div></div>'+confirmCard()+'<div class="card"><h2>Players and handicaps</h2><div class="mu" style="margin-bottom:6px">Handicap = strokes received over 18 holes.</div>';
 for(var p=0;p<4;p++)o+='<div class="row" style="margin:6px 0"><input value="'+esc(S.names[p])+'" onchange="S.names['+p+']=this.value" aria-label="Name"><input type="number" inputmode="numeric" style="width:80px" value="'+S.hcp[p]+'" onchange="S.hcp['+p+']=parseInt(this.value)||0" aria-label="Handicap"></div>';
-o+='</div><div class="card"><h2>Course card · Vancouver Golf Club, black tees</h2><div class="grid mu"><div>Hole</div><div>Par</div><div>Stroke index</div></div>';
+o+='</div><div class="card"><h2>Stake</h2><div class="row"><div class="sp">Per player, per round</div><div class="row" style="width:120px"><span>$</span><input type="number" inputmode="decimal" min="0" step="0.5" value="'+S.stake+'" onchange="S.stake=Math.max(0,parseFloat(this.value)||0)" aria-label="Stake per round"></div></div></div><div class="card"><h2>Course card · Vancouver Golf Club, black tees</h2><div class="grid mu"><div>Hole</div><div>Par</div><div>Stroke index</div></div>';
 for(var h=0;h<18;h++)o+='<div class="grid" style="margin-top:6px"><div>'+(h+1)+'</div><input type="number" inputmode="numeric" value="'+S.par[h]+'" onchange="S.par['+h+']=parseInt(this.value)||4"><input type="number" inputmode="numeric" value="'+S.si[h]+'" onchange="S.si['+h+']=parseInt(this.value)||'+(h+1)+'"></div>';
 o+='</div><div class="row"><button class="pri sp" onclick="S.setup=false;save();render()">Save and play</button><button onclick="askC(\'new\')">New game</button></div>';
 o+='<button class="blk" style="margin-top:10px" onclick="askC(\'redo\')">Redo team picks</button>';
