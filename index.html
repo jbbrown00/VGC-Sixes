@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="VGC Old Codgers Sixes">
+<title>VGC Old Codgers Sixes</title>
+<style>
+:root{--bg:#f4f6f1;--card:#fff;--tx:#1b2a1b;--mu:#6b7a6b;--ac:#2f7d3a;--ac2:#e8f3e9;--bd:#dde4da;--pos:#2f7d3a;--neg:#b3382c;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121712;--card:#1c241c;--tx:#e7efe7;--mu:#93a393;--ac:#5cb86a;--ac2:#243a27;--bd:#2c382c;--pos:#6fd17d;--neg:#ee7b6f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121712;--card:#1c241c;--tx:#e7efe7;--mu:#93a393;--ac:#5cb86a;--ac2:#243a27;--bd:#2c382c;--pos:#6fd17d;--neg:#ee7b6f;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif}
+main{max-width:520px;margin:0 auto;padding:12px 14px 90px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin:10px 0}
+h1{font-size:20px;margin:6px 0}h2{font-size:15px;margin:0 0 8px;color:var(--mu);font-weight:600}
+.row{display:flex;align-items:center;gap:8px}.sp{flex:1}
+button,select{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;padding:8px 12px}
+button.pri{background:var(--ac);color:#fff;border-color:var(--ac)}
+button.blk{display:block;width:100%;margin:6px 0;text-align:left}
+select{width:100%}
+input{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:7px;width:100%}
+.step button{width:44px;height:44px;font-size:22px;padding:0}
+.sc{min-width:34px;text-align:center;font-size:24px;font-weight:700}
+.mu{color:var(--mu);font-size:13px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+.dots{color:var(--ac);letter-spacing:2px;font-size:12px}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));gap:6px}
+.tabs button{flex:1;border:0;background:none;color:var(--mu)}.tabs button.on{color:var(--ac);font-weight:700}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{min-width:44px;text-align:center;padding:4px 6px;border-radius:8px;background:var(--ac2);font-size:13px}
+.big{font-size:22px;font-weight:700}
+.tb{border-collapse:collapse;width:100%;font-size:14px}.tb th,.tb td{padding:5px 3px;text-align:center;min-width:26px}.tb td:first-child,.tb th:first-child{text-align:left;padding-left:2px;min-width:52px}.tb tr+tr td{border-top:1px solid var(--bd)}.tb th{color:var(--mu);font-weight:600}
+.grid{display:grid;grid-template-columns:34px 1fr 1fr;gap:6px;align-items:center}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+var TYPES=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];
+var VGC_PAR=[4,4,3,4,4,5,3,4,4,5,4,3,5,4,4,4,4,4];
+var VGC_SI=[7,13,17,3,9,1,11,5,15,8,12,18,2,16,4,10,14,6];
+var S=null,view='hole',ask=null;
+function blank(){var s=[];for(var i=0;i<4;i++){s.push(new Array(18).fill(null));}
+var par=VGC_PAR.slice(),si=VGC_SI.slice();
+return{names:['Jack','Larry','Earl','Lorry'],hcp:[0,0,0,0],par:par,si:si,scores:s,hole:0,setup:true,types:[null,null,null],cardV:1};}
+function load(){try{var j=localStorage.getItem('sixes2');if(j)S=JSON.parse(j);}catch(e){}if(!S)S=blank();if(!S.types)S.types=[null,null,null];var DN=['Jack','Larry','Earl','Lorry'];S.names=S.names.map(function(n,i){return n==='Player '+(i+1)?DN[i]:n;});if(S.cardV!==1){S.par=VGC_PAR.slice();S.si=VGC_SI.slice();S.cardV=1;}}
+function save(){try{localStorage.setItem('sixes2',JSON.stringify(S));}catch(e){}}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function str(p,h){var H=Math.max(0,S.hcp[p]|0);return Math.floor(H/18)+(S.si[h]<=H%18?1:0);}
+function net(p,h){var g=S.scores[p][h];return g==null?null:g-str(p,h);}
+function cmp(x,y){return x<y?1:x>y?-1:0;}
+function res(h,t){var n=[0,1,2,3].map(function(p){return net(p,h);});
+if(n.some(function(x){return x==null;}))return null;
+var a=t[0].map(function(p){return n[p];}).sort(function(x,y){return x-y;});
+var b=t[1].map(function(p){return n[p];}).sort(function(x,y){return x-y;});
+var c1=cmp(a[0],b[0]),c2=cmp(a[1],b[1]);return{best:c1,second:c2,pts:c1+c2};}
+function layout(){
+if(S.types[0]!=null&&S.types[1]!=null&&S.types[2]==null)S.types[2]=3-S.types[0]-S.types[1];
+var segs=[],st=0,over=false;
+for(var i=0;i<3;i++){
+var ne=i<2?st+5:17,ty=S.types[i];
+var g={i:i,st:st,ne:ne,type:ty,end:null,total:0,pts:[],cnt:0,teams:null,pending:false};
+segs.push(g);
+if(ty==null){g.pending=true;break;}
+g.teams=TYPES[ty];
+for(var h=st;h<=ne;h++){var r=res(h,g.teams);if(!r)break;g.total+=r.pts;g.pts.push(r.pts);g.cnt++;
+if(h==ne||Math.abs(g.total)>2*(ne-h)){g.end=h;break;}}
+if(g.end==null)break;
+st=g.end+1;if(i==2)over=true;}
+return{segs:segs,over:over};}
+function segFor(L,h){for(var k=0;k<L.segs.length;k++){var g=L.segs[k],last=g.end!=null?g.end:g.ne;if(h>=g.st&&h<=last)return g;}return null;}
+function nm(p){return esc(S.names[p]);}
+function tn(g,i){return nm(g.teams[i][0])+' &amp; '+nm(g.teams[i][1]);}
+function fmt(n){return n>0?'+'+n:n<0?'−'+Math.abs(n):'0';}
+function money(n){return n>0?'+$'+n:n<0?'−$'+Math.abs(n):'$0';}
+function cls(n){return n>0?'pos':n<0?'neg':'';}
+function status(g){return g.total===0?'All square':tn(g,g.total>0?0:1)+' '+Math.abs(g.total)+' up';}
+function payout(g){if(g.total===0)return 'Round halved, no money changes hands.';return tn(g,g.total>0?0:1)+' win the round ($2 each).';}
+function cash(L){var m=[0,0,0,0];L.segs.forEach(function(g){if(g.end==null||g.total===0)return;var w=g.total>0?0:1;g.teams[w].forEach(function(p){m[p]+=2;});g.teams[1-w].forEach(function(p){m[p]-=2;});});return m;}
+function typeOf(a,b){for(var t=0;t<3;t++)for(var k=0;k<2;k++){var q=TYPES[t][k];if(q.indexOf(a)>-1&&q.indexOf(b)>-1)return t;}return 0;}
+function bump(p,d){var h=S.hole,g=S.scores[p][h];if(g==null)g=S.par[h];else g=Math.max(1,g+d);S.scores[p][h]=g;save();render();}
+function clr(p){S.scores[p][S.hole]=null;save();render();}
+function go(d){S.hole=Math.max(0,Math.min(17,S.hole+d));save();render();}
+function setView(v){view=v;render();}
+function askC(k){ask=k;render();window.scrollTo(0,0);}
+function doNew(){var n=blank();n.names=S.names;n.hcp=S.hcp;n.par=S.par;n.si=S.si;ask=null;S=n;view='hole';save();render();window.scrollTo(0,0);}
+function doRedo(){S.types=[null,null,null];S.setup=false;ask=null;view='hole';save();render();window.scrollTo(0,0);}
+function confirmCard(){if(!ask)return '';return '<div class="card"><b>'+(ask==='new'?'Clear all scores and start a new game?':'Clear the team picks? Scores are kept.')+'</b><div class="row" style="margin-top:8px"><button class="pri sp" onclick="'+(ask==='new'?'doNew()':'doRedo()')+'">Yes, do it</button><button class="sp" onclick="askC(null)">Cancel</button></div></div>';}
+function setDrive(){var l=+document.getElementById('dl').value,s=+document.getElementById('ds').value;
+if(l===s){document.getElementById('dm').textContent='Pick two different players.';return;}S.types[0]=typeOf(l,s);save();render();}
+function setToss(t){S.types[1]=t;save();render();}
+function flip(){var rem=[0,1,2].filter(function(t){return t!==S.types[0];});setToss(rem[Math.random()<0.5?0:1]);}
+function render(){var a=document.getElementById('app');
+if(S.setup){a.innerHTML=setupHTML();return;}
+var h=view==='hole'?holeHTML():view==='card'?cardHTML():totalsHTML();
+a.innerHTML=h+'<div class="tabs"><button class="'+(view==='hole'?'on':'')+'" onclick="setView(\'hole\')">Hole</button><button class="'+(view==='tot'?'on':'')+'" onclick="setView(\'tot\')">Scores</button><button class="'+(view==='card'?'on':'')+'" onclick="setView(\'card\')">Card</button><button onclick="S.setup=true;save();render()">Setup</button></div>';}
+function head(h){return '<div class="row"><button onclick="go(-1)">‹</button><div class="sp" style="text-align:center"><div class="big">Hole '+(h+1)+'</div><div class="mu">Par '+S.par[h]+' · Stroke index '+S.si[h]+'</div></div><button onclick="go(1)">›</button></div>';}
+function opts(){var o='';for(var p=0;p<4;p++)o+='<option value="'+p+'">'+nm(p)+'</option>';return o;}
+function drivePick(){return '<div class="card"><h2>Round 1 teams</h2><div class="mu" style="margin-bottom:8px">After the hole 1 drives, the longest and shortest drive are partners.</div><div class="mu">Longest drive</div><select id="dl">'+opts()+'</select><div class="mu" style="margin-top:8px">Shortest drive</div><select id="ds">'+opts().replace('value="1"','value="1" selected')+'</select><div id="dm" class="neg"></div><button class="pri blk" style="text-align:center;margin-top:10px" onclick="setDrive()">Set teams</button></div>';}
+function tossPick(){var rem=[0,1,2].filter(function(t){return t!==S.types[0];});var o='<div class="card"><h2>New round, new teams</h2><div class="mu" style="margin-bottom:6px">Coin toss decides. Flip, or tap the pairing you tossed.</div><button class="pri blk" style="text-align:center" onclick="flip()">Flip a coin</button>';
+rem.forEach(function(t){o+='<button class="blk" onclick="setToss('+t+')">'+nm(TYPES[t][0][0])+' &amp; '+nm(TYPES[t][0][1])+' <span class="mu">vs</span> '+nm(TYPES[t][1][0])+' &amp; '+nm(TYPES[t][1][1])+'</button>';});
+return o+'</div>';}
+function rowsHTML(h){var o='';
+for(var p=0;p<4;p++){var sc=S.scores[p][h],k=str(p,h),n=net(p,h);
+o+='<div class="card row"><div class="sp"><div><b>'+nm(p)+'</b></div><div class="dots">'+(k?new Array(k+1).join('●'):'')+'</div><div class="mu">'+(n==null?'No score yet':'Net '+n+' · <a onclick="clr('+p+')" style="color:var(--ac)">clear</a>')+'</div></div><div class="row step"><button onclick="bump('+p+',-1)">−</button><div class="sc" ondblclick="clr('+p+')">'+(sc==null?'–':sc)+'</div><button onclick="bump('+p+',1)">+</button></div></div>';}
+return o;}
+function holeHTML(){var h=S.hole,L=layout(),g=segFor(L,h),o=head(h);
+if(!g){var last=L.segs[L.segs.length-1];
+if(!L.over)return o+'<div class="card">Finish scoring the earlier holes first.</div>';
+var gl='';for(var q=0;q<4;q++)gl+='<div class="row" style="padding:3px 0"><div class="sp">'+nm(q)+'</div><div class="mu">'+grossLine(q)+'</div></div>';
+return o+'<div class="card"><b>Game over after hole '+(last.end+1)+'</b><div class="mu">No more points are in play. Keep entering scores so everyone gets a final 18-hole total, shown below and on the Card tab.</div></div>'+rowsHTML(h)+'<div class="card"><h2>Gross so far</h2>'+gl+'</div>';}
+if(g.pending)return o+(g.i===0?drivePick():tossPick());
+var r=res(h,g.teams),left=g.ne-g.st+1-g.cnt;
+o+='<div class="card"><h2>Round '+(g.i+1)+' · holes '+(g.st+1)+'–'+(g.ne+1)+'</h2><div><b>'+tn(g,0)+'</b></div><div class="mu">vs</div><div><b>'+tn(g,1)+'</b></div><div style="margin-top:8px" class="'+cls(g.total)+'">'+status(g)+'</div><div class="mu">'+(g.end!=null?'Round finished':left+' hole'+(left===1?'':'s')+' left')+'</div></div>';
+o+=rowsHTML(h);
+if(r){o+='<div class="card"><h2>Hole result</h2><div>Best ball: '+lab(r.best,g)+'</div><div>Second ball: '+lab(r.second,g)+'</div><div class="big '+cls(r.pts)+'" style="margin-top:6px">'+(r.pts===0?'Hole halved':tn(g,r.pts>0?0:1)+' '+Math.abs(r.pts)+' pt'+(Math.abs(r.pts)>1?'s':''))+'</div>';
+if(g.end===h){o+='<div style="margin-top:8px"><b>'+(g.i===2?'Game over'+(g.end<17?', but keep scoring so everyone gets a final 18-hole total. ':'. '):'Round over'+(g.end<g.ne?' early, one team can’t catch up. ':'. '))+'</b>'+payout(g)+'</div>';}
+if(h<17)o+='<button class="pri blk" style="text-align:center;margin-top:10px" onclick="go(1)">Next hole ›</button>';
+o+='</div>';}
+else o+='<div class="mu" style="text-align:center">Enter all four scores to see the result. Tap clear to remove a score.</div>';
+return o;}
+function lab(c,g){return c===0?'halved':'won by '+tn(g,c>0?0:1);}
+function gsum(p,a,b){var s=0,c=0;for(var h=a;h<=b;h++){var g=S.scores[p][h];if(g!=null){s+=g;c++;}}return{s:s,c:c};}
+function nsum(p){var s=0,c=0;for(var h=0;h<18;h++){var n=net(p,h);if(n!=null){s+=n;c++;}}return{s:s,c:c};}
+function gv(x,n){return x.c===0?'–':x.s+(x.c<n?'*':'');}
+function grossLine(p){return 'Gross: Out '+gv(gsum(p,0,8),9)+' · In '+gv(gsum(p,9,17),9)+' · Total '+gv(gsum(p,0,17),18);}
+function nineTable(a){var b=a+8,h,pp=0,o='<div class="card" style="overflow-x:auto"><table class="tb"><tr><th>Hole</th>';
+for(h=a;h<=b;h++){o+='<th>'+(h+1)+'</th>';pp+=S.par[h];}o+='<th>'+(a===0?'Out':'In')+'</th></tr><tr class="mu"><td>Par</td>';
+for(h=a;h<=b;h++)o+='<td>'+S.par[h]+'</td>';o+='<td>'+pp+'</td></tr><tr class="mu"><td>Hdcp</td>';
+for(h=a;h<=b;h++)o+='<td>'+S.si[h]+'</td>';o+='<td></td></tr>';
+for(var p=0;p<4;p++){o+='<tr><td><b>'+nm(p)+'</b></td>';for(h=a;h<=b;h++){var g=S.scores[p][h],c=g==null?'':g<S.par[h]?'pos':g>S.par[h]?'neg':'';o+='<td class="'+c+'">'+(g==null?'·':g)+'</td>';}o+='<td><b>'+gv(gsum(p,a,b),9)+'</b></td></tr>';}
+return o+'</table></div>';}
+function sumTable(){var o='<div class="card" style="overflow-x:auto"><h2>Gross and net totals</h2><table class="tb"><tr><th>Player</th><th>Out</th><th>In</th><th>Gross</th><th>Net</th></tr>';
+for(var p=0;p<4;p++)o+='<tr><td><b>'+nm(p)+'</b></td><td>'+gv(gsum(p,0,8),9)+'</td><td>'+gv(gsum(p,9,17),9)+'</td><td><b>'+gv(gsum(p,0,17),18)+'</b></td><td>'+gv(nsum(p),18)+'</td></tr>';
+return o+'</table><div class="mu" style="margin-top:6px">* = holes still to score. Net uses each player’s handicap strokes.</div></div>';}
+function cardHTML(){return '<h1>Scorecard</h1>'+sumTable()+nineTable(0)+nineTable(9);}
+function totalsHTML(){var L=layout(),o='<h1>Scores</h1>';
+L.segs.forEach(function(g){
+if(g.pending){o+='<div class="card"><h2>Round '+(g.i+1)+'</h2><div class="mu">Teams not set yet. Set them on the Hole tab.</div></div>';return;}
+var last=g.end!=null?g.end:g.ne;
+o+='<div class="card"><h2>Round '+(g.i+1)+' · holes '+(g.st+1)+'–'+(last+1)+'</h2><div>'+tn(g,0)+' <span class="mu">vs</span> '+tn(g,1)+'</div><div class="chips" style="margin:8px 0">';
+for(var h=g.st;h<=last;h++){var v=g.pts[h-g.st];o+='<div class="chip"><div class="mu">'+(h+1)+'</div><div class="'+(v!=null?cls(v):'mu')+'">'+(v!=null?fmt(v):'·')+'</div></div>';}
+o+='</div><div class="big '+cls(g.total)+'">'+status(g)+'</div>';
+if(g.end!=null)o+='<div class="mu">'+(g.end<g.ne&&g.i<2?'Ended early after hole '+(g.end+1)+'. ':'')+payout(g)+'</div>';
+o+='</div>';});
+var m=cash(L),ps=[0,1,2,3].sort(function(a,b){return m[b]-m[a];});
+o+='<div class="card"><h2>Money, finished rounds</h2>';
+ps.forEach(function(p){o+='<div class="row" style="padding:4px 0"><div class="sp">'+nm(p)+'<div class="mu">'+grossLine(p)+'</div></div><div class="big '+cls(m[p])+'">'+money(m[p])+'</div></div>';});
+return o+'<div class="mu">$2 per player per round. Rounds still in play aren’t counted. In the gross line, * means holes still to score.</div></div>';}
+function setupHTML(){var o='<h1>VGC Old Codgers Sixes</h1><div class="mu">Setup</div>'+confirmCard()+'<div class="card"><h2>Players and handicaps</h2><div class="mu" style="margin-bottom:6px">Handicap = strokes received over 18 holes.</div>';
+for(var p=0;p<4;p++)o+='<div class="row" style="margin:6px 0"><input value="'+esc(S.names[p])+'" onchange="S.names['+p+']=this.value" aria-label="Name"><input type="number" inputmode="numeric" style="width:80px" value="'+S.hcp[p]+'" onchange="S.hcp['+p+']=parseInt(this.value)||0" aria-label="Handicap"></div>';
+o+='</div><div class="card"><h2>Course card · Vancouver Golf Club, black tees</h2><div class="grid mu"><div>Hole</div><div>Par</div><div>Stroke index</div></div>';
+for(var h=0;h<18;h++)o+='<div class="grid" style="margin-top:6px"><div>'+(h+1)+'</div><input type="number" inputmode="numeric" value="'+S.par[h]+'" onchange="S.par['+h+']=parseInt(this.value)||4"><input type="number" inputmode="numeric" value="'+S.si[h]+'" onchange="S.si['+h+']=parseInt(this.value)||'+(h+1)+'"></div>';
+o+='</div><div class="row"><button class="pri sp" onclick="S.setup=false;save();render()">Save and play</button><button onclick="askC(\'new\')">New game</button></div>';
+o+='<button class="blk" style="margin-top:10px" onclick="askC(\'redo\')">Redo team picks</button>';
+return o;}
+load();render();
+</script>
+</body>
+</html>
